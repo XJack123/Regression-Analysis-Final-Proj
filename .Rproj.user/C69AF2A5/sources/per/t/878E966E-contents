@@ -1,0 +1,79 @@
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+source("01 数据处理.R", encoding = "UTF-8")
+library(ggplot2)
+
+# ===========  所有连续变量 取对前后 分布对比  =====================
+
+# 加载必要的包
+library(gridExtra)
+library(tidyr)
+library(dplyr)
+
+# 定义连续变量
+vars <- c(
+  "FDI", "GDP", "PGDP", "TER_GDP", "APC", "WAGE",
+  "PATENT", "OPEN", "TRANS", "RD", "STHC"
+)
+
+# 批量生成所有变量的原始 vs 对数对比图（网格展示）
+plot_list <- list()
+for (i in seq_along(vars)) {
+  var <- vars[i]
+  var <- paste0("", var)
+
+  # 原始分布（使用 df）
+  p_left <- ggplot(df, aes(x = .data[[var]])) +
+    geom_histogram(aes(y = after_stat(density)),
+      bins = 30,
+      fill = "#AD0B08", alpha = 0.6, color = "#AD0B08"
+    ) +
+    geom_density(color = "#2c3e50", linewidth = 0.6) +
+    labs(x = var, y = "density") +
+    theme_minimal() +
+    theme(axis.title = element_text(size = 9))
+
+  # 对数分布（直接使用 df_log 中的  列）
+  p_right <- ggplot(df_log, aes(x = .data[[var]])) +
+    geom_histogram(aes(y = after_stat(density)),
+      bins = 30,
+      fill = "#237B9F", alpha = 0.6, color = "#237B9F"
+    ) +
+    geom_density(color = "#2c3e50", linewidth = 0.6) +
+    labs(x = var, y = "density") +
+    theme_minimal() +
+    theme(axis.title = element_text(size = 9))
+
+  plot_list[[2 * i - 1]] <- p_left
+  plot_list[[2 * i]] <- p_right
+}
+
+# 展示所有变量（6行x4列，或根据需要调整）
+do.call(grid.arrange, c(plot_list, ncol = 4))
+
+# ===========  自变量相关性   ===================
+
+## 散点图矩阵（散点）
+# library(GGally)
+# ggpairs(df_log, 4:14)
+
+## 相关系数矩阵（色块显示）
+library(corrgram)
+corrgram(df_log[, 4:14],
+  order = TRUE,
+  lower.panel = panel.shade,
+  upper.panel = panel.conf,
+  col.regions = colorRampPalette(c("blue", "white", "red"))
+)
+
+corrgram(df[, 4:14],
+         order = TRUE,
+         lower.panel = panel.shade,
+         upper.panel = panel.conf,
+         col.regions = colorRampPalette(c("blue", "white", "red"))
+)
+
+## 散点图矩阵（分组绘制）
+ggpairs(df, columns = c("FDI", "GDP", "PGDP", "TER_GDP", "Region"), aes(color = Region)) +
+  ggtitle("散点图矩阵") +
+  theme_bw()
+

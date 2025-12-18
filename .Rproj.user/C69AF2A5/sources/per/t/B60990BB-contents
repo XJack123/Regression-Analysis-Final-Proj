@@ -1,0 +1,329 @@
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+source("01 数据处理.R", encoding = "UTF-8")
+
+# ---------------------------------------------------------
+# 1. 数据导入与预处理
+# ---------------------------------------------------------
+library(readxl)
+library(dplyr)
+library(car)
+
+# A. 因变量：仅取对数，不标准化
+df$log_FDI <- log(df$FDI + 1)
+
+# B. 自变量：不取对数，直接标准化 (Z-score)
+x_vars <- c("FDI", "GDP", "PGDP", "TER_GDP", "APC", "WAGE", "RD", "OPEN", "TRANS", "STHC", "STHC_ns", "PATENT")
+x_scaled <- as.data.frame(scale(df[, x_vars]))
+
+# ---------------------------------------------------------
+# 2. 分组 PCA 降维 (基于标准化后的自变量)
+# ---------------------------------------------------------
+# 创建回归用的最终数据集
+df_final <- data.frame(log_FDI = df$log_FDI)
+
+# --- 组1：知识与创新能级 (Innovation_Power) ---
+pca_factor <- prcomp(x_scaled[, c("PATENT", "RD", "STHC", "STHC_ns")])
+df_final$Innovation_Power <- pca_factor$x[, 1]
+
+# --- 组2：市场联通度 (Market_Scale) ---
+pca_market <- prcomp(x_scaled[, c("TRANS", "OPEN")])
+df_final$Market_Scale <- pca_market$x[, 1]
+
+# --- 组3：经济质量与市场深度 (Econ_Quality) ---
+pca_quality <- prcomp(x_scaled[, c("PGDP", "APC", "GDP")])
+df_final$Econ_Quality <- pca_quality$x[, 1]
+
+# --- 组4 & 5：产业结构与成本 (直接使用标准化后的变量) ---
+df_final$Ind_Structure <- x_scaled$TER_GDP
+df_final$Labor_Cost <- x_scaled$WAGE
+
+# ---------------------------------------------------------
+# 3. 回归分析与 VIF 检验
+# ---------------------------------------------------------
+df_final$Region <- df$Region
+df_final$Province <- df$Province
+df_final$Year <- df$Year
+
+
+# 注意：此时因变量是取了对数的 log_FDI
+fit <- lm(log_FDI ~ Innovation_Power + Market_Scale + Econ_Quality + Ind_Structure + Labor_Cost + Region, data = df_final)
+
+# 输出回归摘要
+summary(fit)
+
+par(mfrow = c(2, 2))
+plot(fit, which = 1:4)
+
+# 输出 VIF 检验
+print("--- VIF ---")
+print(vif(fit))
+
+# --------------------------------
+# 引入虚拟变量
+# --------------------------------
+df_final$Year <- df$Year
+df_final$Region <- df$Region
+df_final$Province <- df$Province
+
+fit_dum <- lm(log_FDI ~ Innovation_Power + Market_Scale + Econ_Quality + Ind_Structure + Labor_Cost + Region + Year, data = df_final)
+summary(fit_dum)
+
+par(mfrow = c(2, 2))
+plot(fit_dum, which = 1:4)
+vif(fit_dum)
+
+# 第一步：安全地将因子转换为数字
+# 注意：必须先转字符(as.character)再转数字(as.numeric)，直接转数字会变成 1, 2, 3...
+year_numeric <- as.numeric(as.character(df_final$Year))
+
+# 第二步：根据数字大小进行分组
+# 小于等于2017的归为一组，其他的保持原样
+df_final$Year_Group <- ifelse(year_numeric <= 2016 & year_numeric >= 2012, "2012-2016", as.character(df_final$Year))
+
+# 第三步：将新变量转为因子，并设置基准组（推荐）
+df_final$Year_Group <- as.factor(df_final$Year_Group)
+
+# 第四步：跑回归
+fit_dum_new <- lm(log_FDI ~ Innovation_Power + Market_Scale + Econ_Quality + Ind_Structure + Labor_Cost + Region + Year_Group, data = df_final)
+summary(fit_dum_new)
+
+par(mfrow = c(2, 2))
+plot(fit_dum_new, which = 1:4)
+vif(fit_dum_new)
+
+
+# =============================================================================
+# 模型诊断：异方差、自相关、异常值检验
+# =============================================================================
+
+library(lmtest) # BP检验、DW检验
+library(car) # 异常值检验
+
+cat("\n========== 模型诊断 ==========\n")
+
+# 选择最终模型进行诊断
+final_model <- fit_dum_new
+cat("\n使用模型: fit_dum_new (含Region和Year_Group虚拟变量)\n")
+
+
+# -----------------------------------------------------------------------------
+# 1. 异方差检验 (Heteroscedasticity)
+# -----------------------------------------------------------------------------
+cat("\n========== 1. 异方差检验 ==========\n")
+
+# Breusch-Pagan检验
+# H0: 同方差（残差方差恒定）
+# H1: 异方差（残差方差不恒定）
+bp_test <- bptest(final_model)
+cat("\nBreusch-Pagan检验:\n")
+print(bp_test)
+
+if (bp_test$p.value < 0.05) {
+    cat("\n结论: p =", bp_test$p.value, "< 0.05，拒绝原假设，存在异方差\n")
+    cat("建议: 使用稳健标准误（robust SE）或加权最小二乘法（WLS）\n")
+} else {
+    cat("\n结论: p =", bp_test$p.value, "> 0.05，不拒绝原假设，不存在显著异方差\n")
+}
+
+# White检验（更一般的异方差检验）
+cat("\n\nWhite检验（一般异方差检验）:\n")
+white_test <- bptest(final_model, ~ fitted(final_model) + I(fitted(final_model)^2))
+print(white_test)
+
+
+# -----------------------------------------------------------------------------
+# 2. 自相关检验 (Autocorrelation)
+# -----------------------------------------------------------------------------
+cat("\n\n========== 2. 自相关检验 ==========\n")
+
+# Durbin-Watson检验
+# H0: 无一阶自相关
+# H1: 存在一阶自相关
+# DW值在2附近说明无自相关，接近0说明正自相关，接近4说明负自相关
+dw_test <- dwtest(final_model)
+cat("\nDurbin-Watson检验:\n")
+print(dw_test)
+
+if (dw_test$p.value < 0.05) {
+    cat("\n结论: p =", dw_test$p.value, "< 0.05，存在显著自相关\n")
+    cat("DW统计量 =", dw_test$statistic, "\n")
+    if (dw_test$statistic < 1.5) {
+        cat("提示: DW < 1.5，可能存在正自相关\n")
+    } else if (dw_test$statistic > 2.5) {
+        cat("提示: DW > 2.5，可能存在负自相关\n")
+    }
+    cat("建议: 使用HAC标准误或考虑动态模型\n")
+} else {
+    cat("\n结论: p =", dw_test$p.value, "> 0.05，不存在显著自相关\n")
+}
+
+# Breusch-Godfrey检验（更强大的自相关检验，可检验高阶自相关）
+cat("\n\nBreusch-Godfrey检验（检验高阶自相关）:\n")
+bg_test <- bgtest(final_model, order = 2) # 检验2阶自相关
+print(bg_test)
+
+
+# -----------------------------------------------------------------------------
+# 3. 异常值检验 (Outliers & Influential Points)
+# -----------------------------------------------------------------------------
+cat("\n\n========== 3. 异常值检验 ==========\n")
+
+# 计算诊断统计量
+influence_stats <- influence.measures(final_model)
+
+# A. 标准化残差（Standardized Residuals）
+# 通常|标准化残差| > 2 或 > 3 被认为是异常值
+std_resid <- rstandard(final_model)
+outliers_resid <- which(abs(std_resid) > 3)
+
+cat("\n(1) 标准化残差检验（|标准化残差| > 3）:\n")
+if (length(outliers_resid) > 0) {
+    cat("发现", length(outliers_resid), "个异常观测值:\n")
+    cat("观测编号:", outliers_resid, "\n")
+    cat("标准化残差值:\n")
+    print(std_resid[outliers_resid])
+} else {
+    cat("未发现显著异常值（|标准化残差| > 3）\n")
+}
+
+# B. Cook距离（Cook's Distance）
+# Cook's D > 4/n 被认为是有影响力的观测
+cooksd <- cooks.distance(final_model)
+n <- nrow(df_final)
+threshold_cook <- 4 / n
+influential_cook <- which(cooksd > threshold_cook)
+
+cat("\n(2) Cook距离检验（Cook's D > 4/n =", round(threshold_cook, 4), "）:\n")
+if (length(influential_cook) > 0) {
+    cat("发现", length(influential_cook), "个高影响力观测值:\n")
+    cat("观测编号:", influential_cook, "\n")
+    cat("Cook距离值（前10个）:\n")
+    print(sort(cooksd[influential_cook], decreasing = TRUE)[1:min(10, length(influential_cook))])
+} else {
+    cat("未发现高影响力观测值\n")
+}
+
+# C. 杠杆值（Leverage）
+# 杠杆值 > 2*(p+1)/n 或 3*(p+1)/n 被认为是高杠杆点
+hatvalues <- hatvalues(final_model)
+p <- length(coef(final_model)) - 1 # 自变量个数
+threshold_lev <- 3 * (p + 1) / n
+high_leverage <- which(hatvalues > threshold_lev)
+
+cat("\n(3) 杠杆值检验（Leverage > 3(p+1)/n =", round(threshold_lev, 4), "）:\n")
+if (length(high_leverage) > 0) {
+    cat("发现", length(high_leverage), "个高杠杆观测值:\n")
+    cat("观测编号:", high_leverage, "\n")
+} else {
+    cat("未发现高杠杆观测值\n")
+}
+
+# D. DFFITS
+# |DFFITS| > 2*sqrt(p/n) 被认为是有影响力的观测
+dffits_val <- dffits(final_model)
+threshold_dffits <- 2 * sqrt(p / n)
+influential_dffits <- which(abs(dffits_val) > threshold_dffits)
+
+cat("\n(4) DFFITS检验（|DFFITS| >", round(threshold_dffits, 4), "）:\n")
+if (length(influential_dffits) > 0) {
+    cat("发现", length(influential_dffits), "个有影响力观测值:\n")
+    cat("观测编号:", influential_dffits, "\n")
+} else {
+    cat("未发现有影响力观测值\n")
+}
+
+
+# -----------------------------------------------------------------------------
+# 4. 诊断图形展示
+# -----------------------------------------------------------------------------
+cat("\n\n========== 4. 诊断图形 ==========\n")
+
+par(mfrow = c(2, 3))
+
+# (1) 残差 vs 拟合值（检验异方差）
+plot(fitted(final_model), residuals(final_model),
+    xlab = "拟合值", ylab = "残差",
+    main = "残差 vs 拟合值\n(检验异方差)"
+)
+abline(h = 0, col = "red", lty = 2)
+lines(lowess(fitted(final_model), residuals(final_model)), col = "blue", lwd = 2)
+
+# (2) Q-Q图（检验正态性）
+qqnorm(residuals(final_model), main = "Q-Q图\n(检验正态性)")
+qqline(residuals(final_model), col = "red")
+
+# (3) 标准化残差（检验异常值）
+plot(std_resid,
+    ylab = "标准化残差",
+    main = "标准化残差图\n(检验异常值)",
+    ylim = c(min(-3, min(std_resid)), max(3, max(std_resid)))
+)
+abline(
+    h = c(-3, -2, 0, 2, 3), col = c("red", "orange", "black", "orange", "red"),
+    lty = c(2, 3, 1, 3, 2)
+)
+
+# (4) Cook距离（检验影响力点）
+plot(cooksd,
+    type = "h",
+    ylab = "Cook距离",
+    main = "Cook距离图\n(检验影响力点)"
+)
+abline(h = threshold_cook, col = "red", lty = 2)
+if (length(influential_cook) > 0) {
+    text(influential_cook, cooksd[influential_cook],
+        labels = influential_cook, pos = 3, cex = 0.7, col = "red"
+    )
+}
+
+# (5) 杠杆值
+plot(hatvalues,
+    ylab = "杠杆值",
+    main = "杠杆值图\n(检验高杠杆点)"
+)
+abline(h = threshold_lev, col = "red", lty = 2)
+
+# (6) 残差的时间序列图（检验自相关）
+plot(residuals(final_model),
+    type = "l",
+    ylab = "残差", xlab = "观测顺序",
+    main = "残差序列图\n(检验自相关)"
+)
+abline(h = 0, col = "red", lty = 2)
+
+par(mfrow = c(1, 1))
+
+
+# -----------------------------------------------------------------------------
+# 5. 综合诊断报告
+# -----------------------------------------------------------------------------
+cat("\n\n========== 综合诊断报告 ==========\n")
+cat(
+    "\n1. 异方差: ",
+    ifelse(bp_test$p.value < 0.05, "存在（建议使用稳健标准误）", "不显著"),
+    "\n"
+)
+cat(
+    "2. 自相关: ",
+    ifelse(dw_test$p.value < 0.05, "存在（建议使用HAC标准误）", "不显著"),
+    "\n"
+)
+cat(
+    "3. 异常值: ",
+    ifelse(length(outliers_resid) > 0,
+        paste("发现", length(outliers_resid), "个异常观测"),
+        "未发现显著异常值"
+    ),
+    "\n"
+)
+cat(
+    "4. 影响力点: ",
+    ifelse(length(influential_cook) > 0,
+        paste("发现", length(influential_cook), "个高影响力观测"),
+        "未发现高影响力观测"
+    ),
+    "\n"
+)
+
+cat("\n========== 诊断完成 ==========\n")
+
