@@ -61,6 +61,9 @@ test_heteroscedasticity(model_PCR)
 # 异常值检测
 outlier_results <- test_outliers(model_PCR, df_pca)
 
+# 自相关
+test_autocorrelation(model_PCR)
+
 # ============ 3. 还原原始系数 ============
 
 # 1. 提取主成分回归的系数（只提取主成分的系数，不包括 Region 和截距）

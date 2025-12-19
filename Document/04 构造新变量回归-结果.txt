@@ -1,0 +1,168 @@
+# ====================  构造新变量回归1 结果 ============================
+# ==========   log(FDI) ~ Innovation_Power + Market_Scale + Econ_Quality +  nd_Structure + Labor_Cost + Region ==
+
+> summary(model_p)
+
+Call:
+lm(formula = log_FDI ~ Innovation_Power + Market_Scale + Econ_Quality + 
+    Ind_Structure + Labor_Cost + Region, data = df_final)
+
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-2.42779 -0.45364  0.02049  0.45738  2.25873 
+
+Coefficients:
+                 Estimate Std. Error t value Pr(>|t|)    
+(Intercept)       6.77242    0.06994  96.835  < 2e-16 ***
+Innovation_Power  0.06226    0.05173   1.203    0.230    
+Market_Scale      0.11191    0.07417   1.509    0.132    
+Econ_Quality      0.88640    0.06947  12.759  < 2e-16 ***
+Ind_Structure     0.02913    0.06648   0.438    0.662    
+Labor_Cost       -0.46709    0.09058  -5.157 4.32e-07 ***
+Region东部       -0.16901    0.11853  -1.426    0.155    
+Region西部       -0.63202    0.09759  -6.477 3.38e-10 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.6588 on 332 degrees of freedom
+Multiple R-squared:  0.8203,	Adjusted R-squared:  0.8165 
+F-statistic: 216.5 on 7 and 332 DF,  p-value: < 2.2e-16
+
+# ========== 多重共线性检验（VIF） ==========
+
+> test_vif(model_p)
+
+注意: 模型包含因子变量，使用GVIF和调整后的GVIF
+诊断标准: 调整GVIF > 2 表示存在共线性问题
+
+             变量   GVIF Df 调整GVIF
+ Innovation_Power 7.5262  1   2.7434
+     Market_Scale 7.0785  1   2.6605
+     Econ_Quality 8.6459  1   2.9404
+    Ind_Structure 3.4524  1   1.8581
+       Labor_Cost 6.4081  1   2.5314
+           Region 2.7818  2   1.2915
+
+结论: 以下变量存在共线性问题:
+Innovation_Power, Market_Scale, Econ_Quality, Labor_Cost 
+
+# ====================  构造新变量 并考虑时间效应 的 结果 ============================
+# ==========   log(FDI) ~ Innovation_Power + Market_Scale + Econ_Quality +  nd_Structure + Labor_Cost + Region + Year ==
+
+> summary(model_time)
+
+
+lm(formula = log_FDI ~ Innovation_Power + Market_Scale + Econ_Quality + 
+    Ind_Structure + Labor_Cost + Region + Year, data = df_final)
+
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-2.32336 -0.39065  0.03451  0.49299  1.85135 
+
+Coefficients:
+                 Estimate Std. Error t value Pr(>|t|)    
+(Intercept)       6.27923    0.15497  40.519  < 2e-16 ***
+Innovation_Power -0.04326    0.05242  -0.825 0.409932    
+Market_Scale      0.18993    0.07242   2.623 0.009139 ** 
+Econ_Quality      0.95742    0.06730  14.226  < 2e-16 ***
+Ind_Structure     0.11590    0.06673   1.737 0.083384 .  
+Labor_Cost       -0.87733    0.10706  -8.195 6.01e-15 ***
+Region东部        0.04360    0.11920   0.366 0.714738    
+Region西部       -0.53455    0.09409  -5.681 2.99e-08 ***
+Year2012          0.04600    0.15972   0.288 0.773543    
+Year2013          0.04645    0.16133   0.288 0.773587    
+Year2014          0.01260    0.16335   0.077 0.938560    
+Year2015          0.15131    0.16757   0.903 0.367222    
+Year2016          0.29150    0.17263   1.689 0.092261 .  
+Year2017          0.35806    0.17893   2.001 0.046224 *  
+Year2018          0.59607    0.18720   3.184 0.001594 ** 
+Year2019          0.66809    0.19636   3.402 0.000752 ***
+Year2020          1.03607    0.20876   4.963 1.13e-06 ***
+Year2021          1.07519    0.22719   4.733 3.32e-06 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.6269 on 322 degrees of freedom
+Multiple R-squared:  0.8422,	Adjusted R-squared:  0.8339 
+F-statistic: 101.1 on 17 and 322 DF,  p-value: < 2.2e-16
+
+
+# ================== 上面这个回归的回归诊断 ======================
+
+> test_vif(model_time)
+
+========== 多重共线性检验（VIF） ==========
+
+注意: 模型包含因子变量，使用GVIF和调整后的GVIF
+诊断标准: 调整GVIF > 2 表示存在共线性问题
+
+             变量   GVIF Df 调整GVIF
+ Innovation_Power 8.5347  1   2.9214
+     Market_Scale 7.4513  1   2.7297
+     Econ_Quality 8.9585  1   2.9931
+    Ind_Structure 3.8408  1   1.9598
+       Labor_Cost 9.8861  1   3.1442
+           Region 3.1484  2   1.3321
+             Year 3.4745 10   1.0643
+
+结论: 以下变量存在共线性问题:
+Innovation_Power, Market_Scale, Econ_Quality, Labor_Cost 
+> test_heteroscedasticity(model_time)
+
+Spearman秩相关检验:
+
+	Spearman's rank correlation rho
+
+data:  fitted(model) and abs(residuals(model))
+S = 8672632, p-value = 1.193e-09
+alternative hypothesis: true rho is not equal to 0
+sample estimates:
+       rho 
+-0.3239427 
+
+
+结论: p = 0 < 0.05，存在异方差
+秩相关系数 rho = -0.3239 
+
+	Spearman's rank correlation rho
+
+data:  fitted(model) and abs(residuals(model))
+S = 8672632, p-value = 1.193e-09
+alternative hypothesis: true rho is not equal to 0
+sample estimates:
+       rho 
+-0.3239427 
+
+
+> test_autocorrelation(model_time)
+
+========== 自相关检验 ==========
+
+(1) Durbin-Watson检验:
+H0: 无一阶自相关; H1: 存在一阶自相关
+DW值在2附近说明无自相关，接近0说明正自相关，接近4说明负自相关
+
+
+	Durbin-Watson test
+
+data:  model
+DW = 0.41383, p-value < 2.2e-16
+alternative hypothesis: true autocorrelation is greater than 0
+
+
+结论: p = 0 < 0.05，存在显著自相关
+DW统计量 = 0.4138 
+提示: DW < 1.5，可能存在正自相关
+建议: 使用HAC标准误或考虑动态模型
+
+
+(2) 绘制残差自相关图 (ei vs ei-1):
+相关系数 (ei, ei-1) = 0.793 
+$dw_test
+
+	Durbin-Watson test
+
+data:  model
+DW = 0.41383, p-value < 2.2e-16
+alternative hypothesis: true autocorrelation is greater than 0
+

@@ -17,7 +17,8 @@ library(glmnet)
 library(ncvreg)
 library(caret)
 library(olsrr)
-library(RColorBrewer) 
+library(RColorBrewer)
+library(gridExtra)
 
 # =================== 数据处理 ===================
 df <- read_excel("回归分析数据.xlsx")
@@ -290,6 +291,8 @@ test_autocorrelation <- function(model, plot = TRUE) {
   }
 
   # 2. 绘制 ei vs ei-1 图
+  p <- NULL
+  cor_coef <- NULL
   if (plot) {
     cat("\n\n(2) 绘制残差自相关图 (ei vs ei-1):\n")
 
@@ -320,7 +323,7 @@ test_autocorrelation <- function(model, plot = TRUE) {
         x = expression(paste(e[i - 1])),
         y = expression(paste(e[i])),
         title = NULL,
-        caption = bquote(bold("(相关系数 " ~ rho == .(round(cor_coef, 4)) ~ ")"))
+        caption = bquote(bold(hat(rho) == .(round(cor_coef, 4))))
       ) +
       theme_academic() +
       theme(
@@ -334,6 +337,8 @@ test_autocorrelation <- function(model, plot = TRUE) {
   }
 
   return(list(
-    dw_test = dw_test
+    dw_test = dw_test,
+    plot = p,
+    cor_coef = cor_coef
   ))
 }
