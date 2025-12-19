@@ -1,0 +1,380 @@
+
+# =================== 原模型 模型异方差分析 ==================
+
+Spearman秩相关检验:
+	Spearman's rank correlation rho
+S = 7951372, p-value = 0.000163
+alternative hypothesis: true rho is not equal to 0
+
+结论: p = 2e-04 < 0.05，存在异方差
+秩相关系数 rho = -0.2032 
+
+
+# ================== log-log 模型异方差分析 ==================
+
+Spearman秩相关检验:
+	Spearman's rank correlation rho
+S = 7227276, p-value = 0.0843
+alternative hypothesis: true rho is not equal to 0
+
+结论: p = 0.0843 > 0.05，不存在显著异方差
+秩相关系数 rho = -0.0936 
+
+
+# ====================== 异常值检测 ======================
+样本总数: 341 
+(1)删除学生化残差检验（|删除学生化残差| > 3）:
+发现 1 个异常观测值:
+ 序号   年份   省份   删除学生化残差
+  88   2021   海南     9.2212
+
+(2) Cook距离检验（Cook's D > 4/n = 0.0117 ）:
+发现 11 个高影响力观测值（显示前20个）:
+
+ 序号 年份   省份 Cook距离
+   66 2021   广西 0.013208
+   88 2021   海南 0.385564
+  121 2021 黑龙江 0.023111
+  177 2011   辽宁 0.013333
+  202 2014   宁夏 0.012477
+  215 2016   青海 0.018588
+  289 2013   西藏 0.040711
+  290 2014   西藏 0.022535
+  296 2020   西藏 0.053679
+  297 2021   西藏 0.031425
+  319 2021   云南 0.013160
+
+(3) 杠杆值检验（Leverage > 3(p+1)/n = 0.1232 ）:
+发现 2 个高杠杆观测值:
+
+ 序号 年份 省份 杠杆值
+  287 2011 西藏 0.1741
+  288 2012 西藏 0.1420
+
+
+# ======================= 建立log-log 模型 =======================
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-0.88398 -0.25406 -0.02565  0.23049  1.01192 
+
+Coefficients:
+             Estimate Std. Error t value Pr(>|t|)    
+(Intercept) -9.527499   1.355036  -7.031 1.21e-11 ***
+TER_GDP      0.007703   0.004907   1.570 0.117466    
+log_GDP      0.724179   0.196273   3.690 0.000263 ***
+log_PGDP    -0.308419   0.182843  -1.687 0.092599 .  
+log_APC      0.631005   0.209992   3.005 0.002863 ** 
+log_WAGE     0.572100   0.233874   2.446 0.014965 *  
+log_PATENT   0.165461   0.058763   2.816 0.005163 ** 
+log_OPEN     0.222337   0.018620  11.941  < 2e-16 ***
+log_TRANS    0.172188   0.068029   2.531 0.011841 *  
+log_RD      -0.085623   0.064913  -1.319 0.188079    
+log_STHC    -0.077764   0.203620  -0.382 0.702777    
+log_STHC_ns -0.391539   0.265374  -1.475 0.141064    
+Region东部   0.347770   0.064117   5.424 1.14e-07 ***
+Region西部  -0.139103   0.057228  -2.431 0.015610 *  
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.3521 on 326 degrees of freedom
+Multiple R-squared:  0.9496,	Adjusted R-squared:  0.9476 
+F-statistic: 472.5 on 13 and 326 DF,  p-value: < 2.2e-16
+
+
+===================== 多重共线性检验（VIF） =====================
+
+注意: 模型包含因子变量，使用GVIF和调整后的GVIF
+诊断标准: 调整GVIF > 2 表示存在共线性问题
+
+        变量     GVIF Df 调整GVIF
+     TER_GDP   6.0761  1   2.4650
+     log_GDP 102.6700  1  10.1326
+    log_PGDP  18.2779  1   4.2753
+     log_APC  20.6471  1   4.5439
+    log_WAGE  19.0596  1   4.3657
+  log_PATENT  28.6746  1   5.3549
+    log_OPEN   8.9394  1   2.9899
+   log_TRANS  11.2351  1   3.3519
+      log_RD  33.1412  1   5.7568
+    log_STHC 104.7962  1  10.2370
+ log_STHC_ns 169.7923  1  13.0304
+      Region   3.5703  2   1.3746
+
+结论: 以下变量存在共线性问题:
+TER_GDP, log_GDP, log_PGDP, log_APC, log_WAGE, log_PATENT,
+  log_OPEN, log_TRANS, log_RD, log_STHC, log_STHC_ns 
+
+
+ # ===================  岭回归 (Ridge Regression) ==================
+
+最佳 Lambda: 0.1414813 
+        r2         rmse
+ols  0.9496055   0.3447665
+rid  0.944387    0.3621775
+
+    Variable  OLS_Coef  Ridge_Coef   OLS_调整后GVIF  Ridge_GVIF
+ (Intercept)  -9.5275   -10.0135             NA         NA
+     TER_GDP   0.0077     0.0053         2.4650     0.6635
+     log_GDP   0.7242     0.1328        10.1326     0.1856
+    log_PGDP  -0.3084     0.2473         4.2753     0.5567
+     log_APC   0.6310     0.4189         4.5439     0.4084
+    log_WAGE   0.5721     0.2936         4.3657     0.4588
+  log_PATENT   0.1655     0.1246         5.3549     0.3773
+    log_OPEN   0.2223     0.1402         2.9899     0.6789
+   log_TRANS   0.1722     0.1372         3.3519     0.5787
+      log_RD  -0.0856     0.0474         5.7568     0.3536
+    log_STHC  -0.0778     0.0844        10.2370     0.2296
+ log_STHC_ns  -0.3915     0.0833        13.0304     0.2063
+  Region东部   0.3478     0.3437         1.3746     0.7095
+  Region西部  -0.1391    -0.1671         1.3746     0.7208
+   R-squared   0.9496     0.9444             NA         NA
+        RMSE   0.3448     0.3622             NA         NA
+
+
+ # ====================== Lasso 回归 (α = 1) ====================
+
+========== Lasso 回归 ==========
+
+最优 Lambda: 0.004853471 
+选择变量数: 9 
+
+Lasso 系数 (非零):
+                [,1]
+(Intercept) -10.1903
+TER_GDP       0.0025
+log_GDP       0.2027
+log_APC       0.5044
+log_WAGE      0.5099
+log_PATENT    0.1458
+log_OPEN      0.1992
+log_TRANS     0.1685
+Region东部    0.3412
+Region西部   -0.1234
+
+MSE: 0.1224 
+R²: 0.9483 
+
+ # ====================== Elastic Net (寻找最优 α) ====================
+
+最优 α: 0.2   最优 Lambda: 0.01524061 
+选择变量数: 10 
+
+Elastic Net 系数 (非零):
+
+                [,1]
+(Intercept) -10.0562
+TER_GDP       0.0031
+log_GDP       0.2117
+log_PGDP      0.0126
+log_APC       0.5059
+log_WAGE      0.4795
+log_PATENT    0.1477
+log_OPEN      0.1930
+log_TRANS     0.1683
+Region东部    0.3438
+Region西部   -0.1296
+
+MSE: 0.1225 
+R²: 0.9482 
+
+ # ====================== SCAD ======================
+
+最优 Lambda: 0.001517057 
+选择变量数: 13 
+
+SCAD 系数 (非零):
+
+(Intercept)     TER_GDP     log_GDP    log_PGDP     log_APC    log_WAGE  log_PATENT 
+    -9.5494      0.0076      0.7186     -0.3054      0.6233      0.5801      0.1647 
+   log_OPEN   log_TRANS      log_RD    log_STHC log_STHC_ns  Region东部  Region西部 
+     0.2228      0.1738     -0.0841     -0.0941     -0.3718      0.3463     -0.1383 
+
+MSE: 0.1189 
+R²: 0.9498 
+
+ # ===================== MCP =======================
+
+最优 Lambda: 0.001517057 
+选择变量数: 13 
+
+MCP 系数 (非零):
+
+(Intercept)     TER_GDP     log_GDP    log_PGDP     log_APC    log_WAGE  log_PATENT 
+    -9.5494      0.0076      0.7187     -0.3054      0.6233      0.5801      0.1647 
+   log_OPEN   log_TRANS      log_RD    log_STHC log_STHC_ns  Region东部  Region西部 
+     0.2228      0.1738     -0.0841     -0.0941     -0.3718      0.3463     -0.1383 
+
+MSE: 0.1189 
+R²: 0.9498 
+
+ # =================== 模型比较 ======================
+
+       Model       MSE        R2    N_Vars
+         MCP 0.1188665 0.9497526     13
+        SCAD 0.1188665 0.9497526     13
+       Lasso 0.1224204 0.9482503      9
+ Elastic Net 0.1225234 0.9482067     10
+       Ridge 0.1313204 0.9444881     13
+
+
+
+ # =============================== 逐步回归筛选 ==============================
+
+================= 1. 逐步回归 (AIC准则) ================
+
+Call:
+lm(formula = log_FDI ~ TER_GDP + log_GDP + log_PGDP + log_APC + 
+    log_WAGE + log_PATENT + log_OPEN + log_TRANS + log_RD + log_STHC_ns + 
+    Region, data = df_log)
+
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-0.87660 -0.25685 -0.02224  0.22815  1.00764 
+
+Coefficients:
+             Estimate Std. Error t value Pr(>|t|)    
+(Intercept) -9.481015   1.347795  -7.034 1.18e-11 ***
+TER_GDP      0.008067   0.004807   1.678 0.094269 .  
+log_GDP      0.729290   0.195560   3.729 0.000226 ***
+log_PGDP    -0.310445   0.182527  -1.701 0.089928 .  
+log_APC      0.658187   0.197304   3.336 0.000948 ***
+log_WAGE     0.538017   0.215894   2.492 0.013196 *  
+log_PATENT   0.167458   0.058453   2.865 0.004442 ** 
+log_OPEN     0.219794   0.017366  12.657  < 2e-16 ***
+log_TRANS    0.165594   0.065716   2.520 0.012216 *  
+log_RD      -0.089821   0.063892  -1.406 0.160723    
+log_STHC_ns -0.465509   0.181174  -2.569 0.010630 *  
+Region东部   0.354675   0.061434   5.773 1.81e-08 ***
+Region西部  -0.142698   0.056375  -2.531 0.011835 *  
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.3516 on 327 degrees of freedom
+Multiple R-squared:  0.9496,	Adjusted R-squared:  0.9477 
+F-statistic: 513.2 on 12 and 327 DF,  p-value: < 2.2e-16
+
+
+AIC: 268.9065 
+[AIC模型 VIF]:
+
+    TER_GDP     log_GDP    log_PGDP     log_APC    log_WAGE  log_PATENT    log_OPEN 
+   2.417881   10.109044    4.273462    4.274946    4.035381    5.333624    2.792202 
+  log_TRANS      log_RD log_STHC_ns      Region 
+   3.242118    5.673698    8.907681    1.329367 
+
+
+===================== 2. 逐步回归 (BIC准则) ====================
+
+Call:
+lm(formula = log_FDI ~ log_APC + log_WAGE + log_PATENT + log_OPEN + 
+    log_TRANS + Region, data = df_log)
+
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-1.02460 -0.24306 -0.03132  0.24489  1.05801 
+
+Coefficients:
+            Estimate Std. Error t value Pr(>|t|)    
+(Intercept) -9.19903    0.82929 -11.093  < 2e-16 ***
+log_APC      0.45661    0.15021   3.040 0.002555 ** 
+log_WAGE     0.59889    0.16126   3.714 0.000239 ***
+log_PATENT   0.19384    0.03793   5.111 5.42e-07 ***
+log_OPEN     0.21137    0.01543  13.701  < 2e-16 ***
+log_TRANS    0.27363    0.05035   5.434 1.07e-07 ***
+Region东部    0.35040    0.05725   6.120 2.63e-09 ***
+Region西部   -0.11878    0.05519  -2.152 0.032122 *  
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.3572 on 332 degrees of freedom
+Multiple R-squared:  0.9472,	Adjusted R-squared:  0.9461 
+F-statistic: 850.5 on 7 and 332 DF,  p-value: < 2.2e-16
+
+
+BIC: 309.1903 
+[BIC模型 VIF]:
+
+   log_APC   log_WAGE log_PATENT   log_OPEN  log_TRANS     Region 
+  3.203872   2.967332   3.406782   2.441823   2.445558   1.229684 
+
+====================== 3. 逐步回归 (F检验/P值准则) ====================
+
+准则: 进入 P < 0.05, 剔除 P > 0.10
+
+Call:
+lm(formula = paste(response, "~", paste(preds, collapse = " + ")), 
+    data = l)
+
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-0.88608 -0.23350 -0.03255  0.22651  0.98700 
+
+Coefficients:
+             Estimate Std. Error t value Pr(>|t|)    
+(Intercept) -10.95678    1.09276 -10.027  < 2e-16 ***
+log_PATENT    0.18302    0.05145   3.557 0.000429 ***
+log_OPEN      0.20532    0.01571  13.070  < 2e-16 ***
+log_APC       0.61319    0.16931   3.622 0.000339 ***
+Region东部    0.34572    0.05678   6.089 3.16e-09 ***
+Region西部   -0.12934    0.05544  -2.333 0.020257 *  
+log_GDP       0.29979    0.10131   2.959 0.003306 ** 
+log_RD       -0.10659    0.06022  -1.770 0.077643 .  
+log_TRANS     0.15684    0.06541   2.398 0.017046 *  
+log_WAGE      0.41929    0.19551   2.145 0.032715 *  
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.3536 on 330 degrees of freedom
+Multiple R-squared:  0.9486,	Adjusted R-squared:  0.9471 
+F-statistic:   676 on 9 and 330 DF,  p-value: < 2.2e-16
+
+[F检验模型 VIF]:
+
+log_PATENT   log_OPEN    log_APC     Region    log_GDP     log_RD  log_TRANS   log_WAGE 
+  4.668573   2.511725   3.648160   1.242629   5.207751   5.317985   3.209094   3.634112 
+
+======================= 结果汇总与对比 ========================
+
+--- (1) 拟合效果对比 ---
+
+                              Model     R2 Adj_R2    AIC    BIC Num_Vars
+Full Model               Full Model 0.9496 0.9476 270.75 328.19       13
+Stepwise (AIC)       Stepwise (AIC) 0.9496 0.9477 268.91 322.51       12
+Stepwise (BIC)       Stepwise (BIC) 0.9472 0.9461 274.73 309.19        7
+Stepwise (F-test) Stepwise (F-test) 0.9486 0.9471 269.79 311.91        9
+
+--- (2) 系数对比  ---
+
+    Variable Full Model Stepwise (AIC) Stepwise (BIC) Stepwise (F-test)
+ (Intercept)    -9.5275        -9.4810        -9.1990          -10.9568
+     TER_GDP     0.0077         0.0081             NA                NA
+     log_GDP     0.7242         0.7293             NA            0.2998
+    log_PGDP    -0.3084        -0.3104             NA                NA
+     log_APC     0.6310         0.6582         0.4566            0.6132
+    log_WAGE     0.5721         0.5380         0.5989            0.4193
+  log_PATENT     0.1655         0.1675         0.1938            0.1830
+    log_OPEN     0.2223         0.2198         0.2114            0.2053
+   log_TRANS     0.1722         0.1656         0.2736            0.1568
+      log_RD    -0.0856        -0.0898             NA           -0.1066
+    log_STHC    -0.0778             NA             NA                NA
+ log_STHC_ns    -0.3915        -0.4655             NA                NA
+  Region东部     0.3478         0.3547         0.3504            0.3457
+  Region西部    -0.1391        -0.1427        -0.1188           -0.1293
+
+--- (3) VIF 对比 (VIF Comparison) ---
+
+    Variable Full Model Stepwise (AIC) Stepwise (BIC) Stepwise (F-test)
+     TER_GDP     2.4650         2.4179             NA                NA
+     log_GDP    10.1326        10.1090             NA            5.2078
+    log_PGDP     4.2753         4.2735             NA                NA
+     log_APC     4.5439         4.2749         3.2039            3.6482
+    log_WAGE     4.3657         4.0354         2.9673            3.6341
+  log_PATENT     5.3549         5.3336         3.4068            4.6686
+    log_OPEN     2.9899         2.7922         2.4418            2.5117
+   log_TRANS     3.3519         3.2421         2.4456            3.2091
+      log_RD     5.7568         5.6737             NA            5.3180
+    log_STHC    10.2370             NA             NA                NA
+ log_STHC_ns    13.0304         8.9077             NA                NA
+      Region     1.3746         1.3294         1.2297            1.2426
+
+注: 对于因子变量(如Region)，展示的是调整后的广义VIF (GVIF^(1/(2*Df)))。
