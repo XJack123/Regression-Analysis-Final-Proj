@@ -2,7 +2,7 @@ setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 source("01 数据处理.R", encoding = "UTF-8")
 
 # ============ 原模型 和 log-log 模型的建立 ============
-model <- lm(FDI ~ . - Year - Province, data = df)
+model <- lm(log(FDI) ~ . - Year - Province, data = df)
 test_heteroscedasticity(model)
 
 # 数据对数转换
