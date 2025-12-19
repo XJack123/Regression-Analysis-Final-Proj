@@ -11,6 +11,20 @@ log_vars <- c(
   "PATENT", "OPEN", "TRANS", "RD", "STHC", "STHC_ns"
 )
 df_log <- df[, c("Year", "Province", "Region", "TER_GDP")]
+
+df_log$Region <- as.character(df_log$Region)
+target_regions <- c("中部", "东北") 
+df_log$Region[df_log$Region %in% target_regions] <- "中部及东北"
+df_log$Region <- as.factor(df_log$Region)
+
+df_log$Region <- relevel(df_log$Region, ref = "中部及东北")
+print("当前的基准组是：")
+print(levels(df_log$Region)[1])
+
+print("合并后的区域分布：")
+print(table(df_log$Region))
+
+
 for (var in log_vars) {
   df_log[[paste0("log_", var)]] <- log(df[[var]])
 }
