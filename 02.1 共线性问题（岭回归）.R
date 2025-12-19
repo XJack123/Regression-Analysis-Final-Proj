@@ -40,7 +40,7 @@ vif_rid <- c("(Intercept)" = NA, diag(inv_k %*% R %*% inv_k))
 # --- OLS VIF (直接使用 test_vif 的 GVIF 列) ---
 # 修改说明：直接提取第一列 (GVIF)，确保表格数据与控制台打印的 'GVIF' 列完全一致
 # 注意：对于连续变量，GVIF 等于 VIF；对于因子变量，这是 Generalized VIF
-ols_vif_vals <- vif_matrix[, 1]
+ols_vif_vals <- vif_matrix[, 3]
 
 # 将 VIF 值映射回系数 (包括哑变量)
 vif_ols_mapped <- rep(NA, length(coef_ols))
@@ -60,6 +60,10 @@ r2_rid <- 1 - sum((y - pred_rid)^2) / sum((y - mean(y))^2)
 rmse_rid <- sqrt(mean((y - pred_rid)^2))
 r2_ols <- summary(model_ols)$r.squared
 rmse_ols <- sqrt(mean(residuals(model_ols)^2))
+r2_rid
+rmse_rid
+r2_ols
+rmse_ols
 
 # (4) 整合表格
 final_tab <- data.frame(Variable = names(coef_ols), OLS_Coef = coef_ols, stringsAsFactors = F) %>%
