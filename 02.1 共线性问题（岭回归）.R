@@ -1,19 +1,8 @@
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 source("01 数据处理.R", encoding = "UTF-8")
-if (!require(glmnet)) install.packages("glmnet"); library(glmnet)
 
-# ============ 1. 数据准备 (合并区域/Log转换/去异常) ============
-df <- df %>%
-  mutate(Region = relevel(as.factor(if_else(Region %in% c("中部", "东北"), "中部及东北", as.character(Region))), ref = "中部及东北"))
-
-cat("\n[区域分布]", table(df$Region), "\n")
-
-# 批量 Log 转换并筛选数据
-log_vars <- c("FDI", "GDP", "PGDP", "APC", "WAGE", "PATENT", "OPEN", "TRANS", "RD", "STHC", "STHC_ns")
-df_log <- df %>%
-  mutate(across(all_of(log_vars), log, .names = "log_{.col}")) %>%
-  select(Year, Province, Region, TER_GDP, starts_with("log_")) %>%
-  filter(!(Year == "2021" & Province == "海南")) # 剔除异常值
+# ============ 1. 数据准备 (Log转换/去异常) ============
+invisible(capture.output(source("02 多元线性回归.R", encoding = "UTF-8")))
 
 # ============ 2. OLS 模型与 VIF 检测 ============
 cat("\n=== OLS 模型基准 ===\n")
@@ -43,17 +32,18 @@ coef_rid <- setNames(as.vector(coef(ridge_model, s = best_lambda)), rownames(coe
 
 # (2) 计算 VIF
 # --- Ridge VIF (矩阵法计算有效VIF) ---
-R <- cor(x);  I <- diag(ncol(x))
+R <- cor(x)
+I <- diag(ncol(x))
 inv_k <- solve(R + 2 * best_lambda * I)
-vif_rid <- c("(Intercept)" = NA, diag(inv_k %*% R %*% inv_k)) 
+vif_rid <- c("(Intercept)" = NA, diag(inv_k %*% R %*% inv_k))
 
 # --- OLS VIF (直接使用 test_vif 的 GVIF 列) ---
 # 修改说明：直接提取第一列 (GVIF)，确保表格数据与控制台打印的 'GVIF' 列完全一致
 # 注意：对于连续变量，GVIF 等于 VIF；对于因子变量，这是 Generalized VIF
-ols_vif_vals <- vif_matrix[, 1] 
+ols_vif_vals <- vif_matrix[, 1]
 
 # 将 VIF 值映射回系数 (包括哑变量)
-vif_ols_mapped <- rep(NA, length(coef_ols)) 
+vif_ols_mapped <- rep(NA, length(coef_ols))
 names(vif_ols_mapped) <- names(coef_ols)
 
 for (var_name in rownames(vif_matrix)) {

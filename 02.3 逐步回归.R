@@ -5,73 +5,33 @@
 # ==============================================================================
 
 # 1. 环境设置与包加载
-rm(list = ls())
-if (requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {
-  setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
-}
-if (file.exists("01 数据处理.R")) source("01 数据处理.R", encoding = "UTF-8")
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+source("01 数据处理.R", encoding = "UTF-8")
 
-# 加载必要的包
-packages <- c("readxl", "dplyr", "lmtest", "car", "ggplot2", "olsrr", "tibble")
-new_packages <- packages[!(packages %in% installed.packages()[,"Package"])]
-if(length(new_packages)) install.packages(new_packages)
-invisible(lapply(packages, library, character.only = TRUE))
-
-# =============================== 2. 数据读取与预处理 ==========================
-# (严格保持与之前的逻辑一致)
-if (file.exists("回归分析数据.xlsx")) {
-  df <- read_excel("回归分析数据.xlsx")
-} else if (file.exists("回归分析数据.xlsx - Sheet1.csv")) {
-  df <- read.csv("回归分析数据.xlsx - Sheet1.csv", fileEncoding = "UTF-8")
-} else {
-  stop("未找到数据文件！")
-}
-
-# 因子化与滞后项处理
-df$Region <- as.factor(df$Region)
-df$Province <- as.factor(df$Province)
-df$Year <- as.factor(df$Year)
-if ("FDI_lag" %in% colnames(df)) df <- df[, !colnames(df) %in% c("FDI_lag")]
-
-# 区域合并与基准组设定
-df <- df %>%
-  mutate(Region = as.character(Region)) %>%
-  mutate(Region = case_when(
-    Region %in% c("中部", "东北") ~ "中部及东北",
-    TRUE ~ Region 
-  )) %>%
-  mutate(Region = as.factor(Region)) %>%
-  mutate(Region = relevel(Region, ref = "中部及东北"))
-
-cat("\n[数据处理] 区域已合并，基准组设为 '中部及东北'。\n")
-
-# 对数变换
-log_vars <- c("FDI", "GDP", "PGDP", "APC", "WAGE", "PATENT", "OPEN", "TRANS", "RD", "STHC", "STHC_ns")
-cols_to_keep <- c("Year", "Province", "Region", "TER_GDP")
-df_log <- df[, cols_to_keep[cols_to_keep %in% colnames(df)]]
-
-for (var in log_vars) {
-  if (var %in% colnames(df)) df_log[[paste0("log_", var)]] <- log(df[[var]])
-}
-
-# 剔除特定样本 (海南 2021)
-df_log <- df_log[!(df_log$Year == "2021" & df_log$Province == "海南"), ]
-cat("[数据处理] 已完成对数变换并剔除海南2021样本。\n")
+# =============================== 2. 数据预处理 ==========================
+invisible(capture.output(source("02 多元线性回归.R", encoding = "UTF-8")))
 
 # =============================== 辅助函数 =====================================
 # 安全获取 VIF 的函数 (处理因子变量产生的矩阵输出)
 get_safe_vif <- function(model) {
-  if(length(coef(model)) < 2) return(NA)
-  tryCatch({
-    v <- vif(model)
-    # 如果是矩阵(含因子变量的GVIF)，取最后一列(GVIF^(1/(2*Df)))作为参考指标
-    if(is.matrix(v)) {
-      val <- v[, ncol(v)] 
-    } else {
-      val <- v
+  if (length(coef(model)) < 2) {
+    return(NA)
+  }
+  tryCatch(
+    {
+      v <- vif(model)
+      # 如果是矩阵(含因子变量的GVIF)，取最后一列(GVIF^(1/(2*Df)))作为参考指标
+      if (is.matrix(v)) {
+        val <- v[, ncol(v)]
+      } else {
+        val <- v
+      }
+      return(val)
+    },
+    error = function(e) {
+      return(NA)
     }
-    return(val)
-  }, error = function(e) return(NA))
+  )
 }
 
 # =============================== 3. 建立全模型 ================================
@@ -90,7 +50,7 @@ print(vif_full)
 
 # --- 方法 1: 基于 AIC 准则 ---
 cat("\n\n================ 2. 逐步回归 (AIC准则) ================\n")
-step_aic_model <- step(full_model, direction = "both", trace = 0) 
+step_aic_model <- step(full_model, direction = "both", trace = 0)
 
 print(summary(step_aic_model))
 cat("AIC:", AIC(step_aic_model), "\n")
@@ -188,12 +148,14 @@ cat("################################################################\n")
 extract_vifs_df <- function(model_name, model) {
   vifs <- get_safe_vif(model)
   # 如果 VIF 计算失败或没有变量，返回空 DF
-  if (all(is.na(vifs))) return(data.frame(Variable = character(), Value = numeric()))
-  
+  if (all(is.na(vifs))) {
+    return(data.frame(Variable = character(), Value = numeric()))
+  }
+
   # 处理 VIF 名称
   vif_names <- names(vifs)
   if (is.null(vif_names)) vif_names <- rownames(vifs) # 如果是矩阵可能在 rownames
-  
+
   data.frame(Variable = vif_names, Value = as.numeric(vifs)) %>%
     rename(!!model_name := Value)
 }

@@ -47,7 +47,7 @@ pc_formula <- as.formula(paste("log(FDI) ~ ", paste0("PC", 1:n_pc, collapse = " 
 model_PCR <- lm(pc_formula, data = df_pca)
 summary(model_PCR)
 
-png("Figure/主成分回归诊断图.png", width = 1200, height = 1000, res = 120)
+png("Figure/3.1 主成分回归诊断图.png", width = 1200, height = 1000, res = 120)
 par(mfrow = c(2, 2))
 plot(model_PCR, which = 1:4)
 dev.off()

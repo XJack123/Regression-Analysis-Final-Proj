@@ -1,33 +1,15 @@
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 source("01 数据处理.R", encoding = "UTF-8")
 
-
 # ============ 原模型 和 log-log 模型的建立 ============
 model <- lm(FDI ~ . - Year - Province, data = df)
 test_heteroscedasticity(model)
 
-log_vars <- c(
-  "FDI", "GDP", "PGDP", "APC", "WAGE",
-  "PATENT", "OPEN", "TRANS", "RD", "STHC", "STHC_ns"
-)
-df_log <- df[, c("Year", "Province", "Region", "TER_GDP")]
-
-df_log$Region <- as.character(df_log$Region)
-target_regions <- c("中部", "东北") 
-df_log$Region[df_log$Region %in% target_regions] <- "中部及东北"
-df_log$Region <- as.factor(df_log$Region)
-
-df_log$Region <- relevel(df_log$Region, ref = "中部及东北")
-print("当前的基准组是：")
-print(levels(df_log$Region)[1])
-
-print("合并后的区域分布：")
-print(table(df_log$Region))
-
-
-for (var in log_vars) {
-  df_log[[paste0("log_", var)]] <- log(df[[var]])
-}
+# 数据对数转换
+log_vars <- c("FDI", "GDP", "PGDP", "APC", "WAGE", "PATENT", "OPEN", "TRANS", "RD", "STHC", "STHC_ns")
+df_log <- df %>%
+  mutate(across(all_of(log_vars), log, .names = "log_{.col}")) %>%
+  select(Year, Province, TER_GDP, starts_with("log_"), Region)
 
 # log-log 模型
 model_log <- lm(log_FDI ~ . - Year - Province, data = df_log)

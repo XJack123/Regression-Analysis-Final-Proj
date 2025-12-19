@@ -5,7 +5,7 @@ if (requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable())
 }
 getwd()
 
-# =============== 加载包 ===============  
+# =============== 加载包 ===============
 library(readxl)
 library(dplyr)
 library(car)
@@ -13,20 +13,29 @@ library(plm)
 library(lmtest)
 library(psych)
 library(ggplot2)
+library(glmnet)
+library(ncvreg)
+library(caret)
+library(olsrr)
+library(RColorBrewer) 
 
-# =================== 数据处理 =================== 
+# =================== 数据处理 ===================
 df <- read_excel("回归分析数据.xlsx")
 
 colnames(df)
 
-# 将 Region 和 Province 转换为因子型
-df$Region <- as.factor(df$Region)
-df$Province <- as.factor(df$Province)
-df$Year <- as.factor(df$Year)
 # 保存 FDI_lag 变量
 FDI_lag_temp <- df$FDI_lag
-# 删除 FDI_lag 列
-df <- df[, !colnames(df) %in% c("FDI_lag")]
+
+# 合并 Region 变量，并将 3 个变量转换为因子型
+df <- df %>%
+  mutate(
+    Region = ifelse(Region %in% c("东北", "中部"), "中部及东北", Region),
+    Region = factor(Region, levels = c("中部及东北", "东部", "西部")),
+    Province = as.factor(Province),
+    Year = as.factor(Year)
+  ) %>%
+  select(-FDI_lag)
 
 summary(df)
 
@@ -43,20 +52,20 @@ theme_academic <- function() {
       # 面板与网格：去除所有网格线
       panel.grid.major = element_blank(),
       panel.grid.minor = element_blank(),
-      
+
       # 边框与背景
       panel.border = element_rect(color = "black", fill = NA, linewidth = 0.8),
       plot.background = element_rect(fill = "white", color = NA),
-      
+
       # 文字样式
       axis.text = element_text(color = "black", size = 10, family = "serif"),
       axis.title = element_text(face = "bold", size = 11, family = "serif"),
-      
+
       # 图例样式
       legend.background = element_blank(),
       legend.key = element_blank(),
       legend.title = element_text(face = "bold", size = 10, family = "serif"),
-      
+
       # 底部标签样式 ((a), (b))
       plot.caption = element_text(
         hjust = 0.5, size = 13, face = "bold",
@@ -76,20 +85,20 @@ theme_academic <- function() {
       # 面板与网格：去除所有网格线
       panel.grid.major = element_blank(),
       panel.grid.minor = element_blank(),
-      
+
       # 边框与背景
       panel.border = element_rect(color = "black", fill = NA, linewidth = 0.8),
       plot.background = element_rect(fill = "white", color = NA),
-      
+
       # 文字样式
       axis.text = element_text(color = "black", size = 10, family = "serif"),
       axis.title = element_text(face = "bold", size = 11, family = "serif"),
-      
+
       # 图例样式
       legend.background = element_blank(),
       legend.key = element_blank(),
       legend.title = element_text(face = "bold", size = 10, family = "serif"),
-      
+
       # 底部标签样式 ((a), (b))
       plot.caption = element_text(
         hjust = 0.5, size = 13, face = "bold",
@@ -99,21 +108,22 @@ theme_academic <- function() {
 }
 
 
-#============ 回归诊断函数 ============
+# ============ 回归诊断函数 ============
 
 # --- Spearman秩相关检验异方差 ---
 test_heteroscedasticity <- function(model) {
   # Spearman秩相关检验（拟合值 vs 残差绝对值）
   spearman_test <- cor.test(fitted(model), abs(residuals(model)), method = "spearman")
-  
+
   cat("\nSpearman秩相关检验:\n")
   print(spearman_test)
-  
+
   cat(ifelse(spearman_test$p.value < 0.05,
-             paste("\n结论: p =", round(spearman_test$p.value, 4), "< 0.05，存在异方差"),
-             paste("\n结论: p =", round(spearman_test$p.value, 4), "> 0.05，不存在显著异方差")))
+    paste("\n结论: p =", round(spearman_test$p.value, 4), "< 0.05，存在异方差"),
+    paste("\n结论: p =", round(spearman_test$p.value, 4), "> 0.05，不存在显著异方差")
+  ))
   cat("\n秩相关系数 rho =", round(spearman_test$estimate, 4), "\n")
-  
+
   return(spearman_test)
 }
 
@@ -122,15 +132,15 @@ test_heteroscedasticity <- function(model) {
 test_outliers <- function(model, data) {
   cat("\n========== 异常值检测 ==========\n")
   cat("样本总数:", nrow(data), "\n")
-  
+
   # 获取模型使用的实际数据行号
   model_data <- model.frame(model)
   actual_indices <- as.numeric(rownames(model_data))
-  
+
   # 1. 删除学生化残差
   deleted_stud_resid <- rstudent(model)
   outliers_resid <- which(abs(deleted_stud_resid) > 3)
-  
+
   cat("\n(1) 删除学生化残差检验（|删除学生化残差| > 3）:\n")
   if (length(outliers_resid) > 0) {
     cat("发现", length(outliers_resid), "个异常观测值:\n\n")
@@ -150,7 +160,7 @@ test_outliers <- function(model, data) {
   n <- length(actual_indices)
   threshold_cook <- 4 / n
   influential_cook <- which(cooksd > threshold_cook)
-  
+
   cat("\n(2) Cook距离检验（Cook's D > 4/n =", round(threshold_cook, 4), "）:\n")
   if (length(influential_cook) > 0) {
     cat("发现", length(influential_cook), "个高影响力观测值（显示前20个）:\n\n")
@@ -166,13 +176,13 @@ test_outliers <- function(model, data) {
   } else {
     cat("未发现高影响力观测值\n")
   }
-  
+
   # 3. 杠杆值
   hatvalues_val <- hatvalues(model)
   p <- length(coef(model)) - 1
   threshold_lev <- 3 * (p + 1) / n
   high_leverage <- which(hatvalues_val > threshold_lev)
-  
+
   cat("\n(3) 杠杆值检验（Leverage > 3(p+1)/n =", round(threshold_lev, 4), "）:\n")
   if (length(high_leverage) > 0) {
     cat("发现", length(high_leverage), "个高杠杆观测值（显示前20个）:\n\n")
@@ -188,7 +198,7 @@ test_outliers <- function(model, data) {
   } else {
     cat("未发现高杠杆观测值\n")
   }
-  
+
   return(list(
     outliers = outliers_resid,
     influential = influential_cook,
@@ -200,10 +210,10 @@ test_outliers <- function(model, data) {
 
 test_vif <- function(model) {
   cat("\n========== 多重共线性检验（VIF） ==========\n")
-  
+
   # 计算VIF
   vif_result <- vif(model)
-  
+
   # 判断是否为GVIF（包含因子变量）
   if (is.matrix(vif_result)) {
     # 有因子变量，使用GVIF^(1/(2*Df))
@@ -216,7 +226,7 @@ test_vif <- function(model) {
     cat("\n注意: 模型包含因子变量，使用GVIF和调整后的GVIF\n")
     cat("诊断标准: 调整GVIF > 2 表示存在共线性问题\n\n")
     print(result_df, row.names = FALSE)
-    
+
     # 诊断
     problem_vars <- result_df$变量[result_df$调整GVIF > 2]
     if (length(problem_vars) > 0) {
@@ -233,11 +243,11 @@ test_vif <- function(model) {
     )
     cat("\n诊断标准: VIF > 10 表示严重共线性，VIF > 5 表示中等共线性\n\n")
     print(result_df, row.names = FALSE)
-    
+
     # 诊断
     severe_vars <- result_df$变量[result_df$VIF > 10]
     moderate_vars <- result_df$变量[result_df$VIF > 5 & result_df$VIF <= 10]
-    
+
     if (length(severe_vars) > 0) {
       cat("\n严重共线性变量 (VIF > 10):\n")
       cat(paste(severe_vars, collapse = ", "), "\n")
@@ -250,22 +260,22 @@ test_vif <- function(model) {
       cat("\n结论: 未发现显著的多重共线性问题\n")
     }
   }
-  
+
   return(invisible(vif_result))
 }
 
 # --- 自相关检验函数 ---
 test_autocorrelation <- function(model, plot = TRUE) {
   cat("\n========== 自相关检验 ==========\n")
-  
+
   # 1. Durbin-Watson检验
   cat("\n(1) Durbin-Watson检验:\n")
   cat("H0: 无一阶自相关; H1: 存在一阶自相关\n")
   cat("DW值在2附近说明无自相关，接近0说明正自相关，接近4说明负自相关\n\n")
-  
+
   dw_test <- dwtest(model)
   print(dw_test)
-  
+
   if (dw_test$p.value < 0.05) {
     cat("\n结论: p =", round(dw_test$p.value, 4), "< 0.05，存在显著自相关\n")
     cat("DW统计量 =", round(dw_test$statistic, 4), "\n")
@@ -282,17 +292,17 @@ test_autocorrelation <- function(model, plot = TRUE) {
   # 2. 绘制 ei vs ei-1 图
   if (plot) {
     cat("\n\n(2) 绘制残差自相关图 (ei vs ei-1):\n")
-    
+
     resid <- residuals(model)
     n <- length(resid)
-    
+
     # 创建滞后残差
-    resid_lag1 <- resid[1:(n-1)]
+    resid_lag1 <- resid[1:(n - 1)]
     resid_current <- resid[2:n]
-    
+
     # 计算相关系数
     cor_coef <- cor(resid_lag1, resid_current)
-    
+
     # 创建数据框用于 ggplot2
     plot_data <- data.frame(
       ei_lag = resid_lag1,
@@ -302,25 +312,28 @@ test_autocorrelation <- function(model, plot = TRUE) {
     p <- ggplot(plot_data, aes(x = ei_lag, y = ei)) +
       geom_vline(xintercept = 0, linetype = "longdash", color = "gray70", linewidth = 0.4) +
       geom_hline(yintercept = 0, linetype = "longdash", color = "gray70", linewidth = 0.4) +
-      geom_point(shape = 21, fill = "#87b1e2ff", color = "gray30", 
-                 size = 3.5, stroke = 0.25, alpha = 0.85) +
+      geom_point(
+        shape = 21, fill = "#87b1e2ff", color = "gray30",
+        size = 3.5, stroke = 0.25, alpha = 0.85
+      ) +
       labs(
-        x = expression(paste(e[i-1])),
+        x = expression(paste(e[i - 1])),
         y = expression(paste(e[i])),
         title = NULL,
-        caption = bquote(bold("(相关系数 "~rho == .(round(cor_coef, 4))~")"))
+        caption = bquote(bold("(相关系数 " ~ rho == .(round(cor_coef, 4)) ~ ")"))
       ) +
       theme_academic() +
       theme(
-        plot.caption = element_text(hjust = 0.5, size = 12, face = "bold", 
-                                    margin = margin(t = 10))
+        plot.caption = element_text(
+          hjust = 0.5, size = 12, face = "bold",
+          margin = margin(t = 10)
+        )
       )
     print(p)
     cat("相关系数 (ei, ei-1) =", round(cor_coef, 4), "\n")
   }
-  
+
   return(list(
     dw_test = dw_test
   ))
 }
-

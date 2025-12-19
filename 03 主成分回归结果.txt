@@ -25,43 +25,49 @@ lm(formula = pc_formula, data = df_pca)
 
 Residuals:
      Min       1Q   Median       3Q      Max 
--2.97770 -0.40914  0.04299  0.47883  2.03723 
+-2.97960 -0.38086  0.00828  0.47353  2.03873 
 
 Coefficients:
             Estimate Std. Error t value Pr(>|t|)    
-(Intercept)  6.89559    0.13139  52.483  < 2e-16 ***
-PC1          1.04236    0.05246  19.870  < 2e-16 ***
-PC2          0.13236    0.04201   3.151  0.00177 ** 
-Region东部   0.01228    0.16364   0.075  0.94024    
-Region西部  -1.01676    0.14542  -6.992 1.48e-11 ***
-Region中部  -0.16440    0.16003  -1.027  0.30502    
+(Intercept)  6.78645    0.07731  87.786  < 2e-16 ***
+PC1          1.03835    0.05232  19.847  < 2e-16 ***
+PC2          0.13622    0.04184   3.256  0.00125 ** 
+Region东部   0.12404    0.12224   1.015  0.31094    
+Region西部  -0.91013    0.10186  -8.935  < 2e-16 ***
 ---
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
-Residual standard error: 0.745 on 334 degrees of freedom
-Multiple R-squared:  0.7688,	Adjusted R-squared:  0.7654 
-F-statistic: 222.2 on 5 and 334 DF,  p-value: < 2.2e-16
+Residual standard error: 0.7451 on 335 degrees of freedom
+Multiple R-squared:  0.7681,	Adjusted R-squared:  0.7653 
+F-statistic: 277.4 on 4 and 335 DF,  p-value: < 2.2e-16
+
 
 # ===================== 多重共线性诊断 ======================
 
-> vif(model_PCR)
-           GVIF Df GVIF^(1/(2*Df))
-PC1    1.680851  1        1.296476
-PC2    1.077793  1        1.038168
-Region 1.794976  3        1.102410
+> test_vif(model_PCR)
+
+注意: 模型包含因子变量，使用GVIF和调整后的GVIF
+诊断标准: 调整GVIF > 2 表示存在共线性问题
+
+   变量   GVIF Df 调整GVIF
+    PC1 1.6716  1   1.2929
+    PC2 1.0692  1   1.0340
+ Region 1.7681  2   1.1531
+
+结论: 未发现显著的多重共线性问题
 
 # ===================== 还原各变量系数 =====================
 
 > print(coef_summary)
         Scaled_Coef Original_Coef
-GDP         0.12470       0.00001
-PGDP        0.13612       0.00000
-TER_GDP     0.10800       0.01124
-APC         0.13933       0.00002
-WAGE        0.11752       0.00000
-RD          0.12374       0.00025
-OPEN        0.11433       0.00000
-TRANS       0.10169       0.08820
-STHC        0.12125       0.00000
-STHC_ns     0.12785       0.00001
-PATENT      0.11768       0.00000
+GDP         0.12372       0.00001
+PGDP        0.13659       0.00000
+TER_GDP     0.10891       0.01134
+APC         0.13992       0.00002
+WAGE        0.11839       0.00000
+RD          0.12277       0.00025
+OPEN        0.11373       0.00000
+TRANS       0.10054       0.08720
+STHC        0.12028       0.00000
+STHC_ns     0.12698       0.00001
+PATENT      0.11691       0.00000
