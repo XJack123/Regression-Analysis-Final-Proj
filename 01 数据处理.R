@@ -8,6 +8,7 @@ getwd()
 # =============== 加载包 ===============
 library(readxl)
 library(dplyr)
+library(tidyr)
 library(car)
 library(plm)
 library(lmtest)
@@ -21,15 +22,15 @@ library(RColorBrewer)
 library(gridExtra)
 
 # =================== 数据处理 ===================
-df <- read_excel("回归分析数据.xlsx")
+df_raw <- read_excel("回归分析数据.xlsx")
 
-colnames(df)
+colnames(df_raw)
 
 # 保存 FDI_lag 变量
-FDI_lag_temp <- df$FDI_lag
+FDI_lag_temp <- df_raw$FDI_lag
 
 # 合并 Region 变量，并将 3 个变量转换为因子型
-df <- df %>%
+df <- df_raw %>%
   mutate(
     Region = ifelse(Region %in% c("东北", "中部"), "中部及东北", Region),
     Region = factor(Region, levels = c("中部及东北", "东部", "西部")),
