@@ -9,42 +9,46 @@ color_log <- "#237B9F" # 对数分布颜色（深蓝）
 # 定义连续变量
 vars <- c("FDI", "PATENT", "TER_GDP")
 
-# 批量生成所有变量的原始 vs 对数对比图（网格展示）
+# 批量生成所有变量的原始 vs 对数对比图（2行3列布局）
+# 第一行：三个变量的原始分布 (a)(b)(c)
+# 第二行：三个变量的对数分布 (d)(e)(f)
 plot_list <- list()
+captions <- c("(a)", "(b)", "(c)", "(d)", "(e)", "(f)")
+
 for (i in seq_along(vars)) {
     var <- vars[i]
 
-    # 原始分布（使用 df）
-    p_left <- ggplot(df, aes(x = .data[[var]])) +
+    # 原始分布（使用 df）- 第一行
+    p_original <- ggplot(df, aes(x = .data[[var]])) +
         geom_histogram(aes(y = after_stat(density)),
             bins = 30,
             fill = color_original, alpha = 0.6, color = color_original
         ) +
         geom_density(color = "#2c3e50", linewidth = 0.6) +
-        labs(x = var, y = "Density") +
+        labs(x = var, y = "Density", caption = captions[i]) +
         theme_academic() +
         theme(axis.title = element_text(size = 9))
 
-    # 对数分布（直接对 df 中的变量取 log）
-    p_right <- ggplot(df, aes(x = log(.data[[var]]))) +
+    # 对数分布（直接对 df 中的变量取 log）- 第二行
+    p_log <- ggplot(df, aes(x = log(.data[[var]]))) +
         geom_histogram(aes(y = after_stat(density)),
             bins = 30,
             fill = color_log, alpha = 0.6, color = color_log
         ) +
         geom_density(color = "#2c3e50", linewidth = 0.6) +
-        labs(x = paste0("log(", var, ")"), y = "Density") +
+        labs(x = paste0("log(", var, ")"), y = "Density", caption = captions[i + 3]) +
         theme_academic() +
         theme(axis.title = element_text(size = 9))
 
-    plot_list[[2 * i - 1]] <- p_left
-    plot_list[[2 * i]] <- p_right
+    plot_list[[i]] <- p_original
+    plot_list[[i + 3]] <- p_log
 }
 
-# 展示所有变量（6行x4列，或根据需要调整）
-p_dist <- do.call(grid.arrange, c(plot_list, ncol = 2))
+# 展示所有变量（2行3列：每列是同一变量的原始vs对数对比）
+p_dist <- do.call(grid.arrange, c(plot_list, ncol = 3, nrow = 2))
 
 # 保存分布对比图
-ggsave("Figure/1.1 变量分布直方图对比.png", plot = p_dist, width = 8, height = 8, dpi = 300)
+ggsave("Figure/1.1 变量分布直方图对比.png", plot = p_dist, width = 12, height = 6, dpi = 300)
 
 
 # ============= 地图：2021年各省FDI分布 ========================
@@ -90,16 +94,15 @@ ggplot() +
         if (!is.null(nine_dash)) geom_sf(data = nine_dash, fill = NA, color = "grey30", linewidth = 0.3)
     } +
 
-  
+
     # 配色
     scale_fill_gradientn(
-      # 颜色渐变
-      colors = c("#F5F5F5", "#DB7093", "#6f63cb", "#483D8B"),
-      # colors = c("#FCFDBF", "#FEC98D", "#FD9567", "#F1605D", "#B73779", "#721F81", "#2C115F"),
-      
-      na.value = "#EEEEEE",
-      name = "FDI",
-  
+        # 颜色渐变
+        colors = c("#F5F5F5", "#DB7093", "#6f63cb", "#483D8B"),
+        # colors = c("#FCFDBF", "#FEC98D", "#FD9567", "#F1605D", "#B73779", "#721F81", "#2C115F"),
+
+        na.value = "#EEEEEE",
+        name = "FDI",
     ) +
 
     # Lambert等角圆锥投影（中国官方地图常用）
@@ -121,13 +124,19 @@ ggplot() +
 
 # 保存地图
 ggsave("Figure/1.2 2021年分省FDI热力地图.png", width = 8, height = 6, dpi = 300)
-    
+
 
 # ===========  自变量相关性   ===================
 
-# 计算相关系数矩阵
+# 计算相关系数矩阵（除TER_GDP外都取对数）
 cor_vars <- c("FDI", "GDP", "PGDP", "TER_GDP", "APC", "WAGE", "PATENT", "OPEN", "TRANS", "RD", "STHC", "STHC_ns")
-cor_mat <- cor(df[, cor_vars], use = "complete.obs")
+
+# 准备数据：除TER_GDP外都取对数
+df_cor <- df[, cor_vars]
+log_vars <- setdiff(cor_vars, "TER_GDP")
+df_cor[, log_vars] <- log(df_cor[, log_vars])
+
+cor_mat <- cor(df_cor, use = "complete.obs")
 
 # 转换为长格式
 cor_long <- cor_mat %>%
@@ -139,14 +148,19 @@ cor_long <- cor_mat %>%
 cor_long$Var1 <- factor(cor_long$Var1, levels = cor_vars)
 cor_long$Var2 <- factor(cor_long$Var2, levels = rev(cor_vars))
 
+# 创建变量标签：除TER_GDP外都显示为log(XXX)
+var_labels <- ifelse(cor_vars == "TER_GDP", "TER_GDP", paste0("log(", cor_vars, ")"))
+names(var_labels) <- cor_vars
+
 # 绑制相关系数热图
 p_cor <- ggplot(cor_long, aes(x = Var1, y = Var2, fill = Correlation)) +
     geom_tile(color = "white", linewidth = 0.5) +
-    
+
     # 添加相关系数文字
-    geom_text(aes(label = sprintf("%.2f", Correlation)), 
-              color = "black", size = 2.8, family = "serif") +
-    
+    geom_text(aes(label = sprintf("%.2f", Correlation)),
+        color = "black", size = 2.8, family = "serif"
+    ) +
+
     # 配色：蓝-白-红渐变
     scale_fill_gradient2(
         low = color_log,
@@ -156,7 +170,11 @@ p_cor <- ggplot(cor_long, aes(x = Var1, y = Var2, fill = Correlation)) +
         limits = c(-1, 1),
         name = "Correlation"
     ) +
-    
+
+    # 设置轴标签
+    scale_x_discrete(labels = var_labels) +
+    scale_y_discrete(labels = var_labels[rev(cor_vars)]) +
+
     # 学术风格主题
     theme_academic() +
     theme(
@@ -168,7 +186,6 @@ p_cor <- ggplot(cor_long, aes(x = Var1, y = Var2, fill = Correlation)) +
         legend.key.width = unit(0.4, "cm"),
         legend.key.height = unit(1.2, "cm")
     ) +
-    
     coord_fixed()
 
 print(p_cor)
@@ -182,35 +199,74 @@ ggsave("Figure/1.3 相关系数矩阵.png", plot = p_cor, width = 9, height = 6,
 library(GGally)
 df_raw$Region <- factor(df_raw$Region, levels = c("西部", "东北", "中部", "东部"))
 cols_npg <- c("#54a377ff", "#DB7093", "#6f63cb", "#b6b859ff")
-p_pairs <- ggpairs(df_raw, 
-        columns = c("FDI","STHC", "TRANS", "PGDP", "TER_GDP","WAGE", "Region"), 
-        mapping = aes(color = Region, fill = Region), 
-        lower = list(continuous = wrap("points", shape = 21, size = 2, stroke = 0.2, alpha = 0.7)),
-        diag = list(continuous = wrap("densityDiag", alpha = 0.7)),
-        upper = list(combo = wrap("box_no_facet", fill = NA,lwd = 0.8, outlier.size = 1))
+
+# 准备散点图矩阵数据：除TER_GDP外都取对数
+plot_vars <- c("FDI", "STHC", "TRANS", "PGDP", "TER_GDP", "WAGE")
+log_plot_vars <- setdiff(plot_vars, "TER_GDP")
+df_pairs[, log_plot_vars] <- log(df_raw[, c(plot_vars, "Region")])
+colnames(df_pairs) <- c(paste0("log(", log_plot_vars, ")"), "TER_GDP", "Region")
+
+p_pairs <- ggpairs(df_pairs,
+    columns = 1:7, # 前7列是变量，第7列是Region
+    mapping = aes(color = Region, fill = Region),
+    lower = list(continuous = wrap("points", shape = 21, size = 2, stroke = 0.2, alpha = 0.7)),
+    diag = list(continuous = wrap("densityDiag", alpha = 0.7)),
+    upper = list(combo = wrap("box_no_facet", fill = NA, lwd = 0.8, outlier.size = 1))
 ) +
-  theme_academic() +
-  theme(axis.text.y = element_blank(), axis.ticks.y = element_blank()) +
-  scale_fill_manual(values = cols_npg) +
-  scale_color_manual(values = cols_npg)
+    theme_academic() +
+    theme(axis.text.y = element_blank(), axis.ticks.y = element_blank()) +
+    scale_fill_manual(values = cols_npg) +
+    scale_color_manual(values = cols_npg)
 
 ggsave("Figure/1.4 散点图矩阵.png", plot = p_pairs, width = 13, height = 10, dpi = 300)
 
 
+# # ========================== Region 分组箱线图 ========================
+# 
+# 
+# # 以 2021 年数据按 Region 绘制 FDI 分组箱线图
+# # 使用与散点图矩阵一致的 Region 四分法与配色，并应用 theme_academic()
+# df_2021_box <- df_raw %>%
+#     mutate(Year = as.character(Year)) %>%
+#     filter(Year == "2021") %>%
+#     mutate(Region = factor(Region, levels = c("西部", "东北", "中部", "东部")))
+# 
+# cols_npg <- c("#54a377ff", "#DB7093", "#6f63cb", "#b6b859ff")
+# 
+# # 取对数后的 2021 年 FDI 分组箱线图
+# p_box_log_2021 <- ggplot(df_2021_box, aes(x = Region, y = log(FDI), color = Region)) +
+#     geom_boxplot(
+#         fill = NA, linewidth = 0.8,
+#         outlier.shape = 21, outlier.size = 1.6, outlier.fill = NA
+#     ) +
+#     scale_color_manual(values = cols_npg) +
+#     labs(x = "Region", y = "log(FDI)", title = NULL) +
+#     labs(caption = "(b)") +
+#     theme_academic() +
+#     theme(
+#         axis.text.x = element_text(size = 9),
+#         axis.text.y = element_text(size = 9)
+#     )
+# 
+# print(p_box_log_2021)
+# 
+# ggsave("Figure/1.4.1 2021年log(FDI)分组箱线图.png", plot = p_box_log_2021, width = 8, height = 5, dpi = 300)
+
+
 # # ===========  热图：2021年各省份指标  ===================
-# 
+#
 # library(pheatmap)
-# 
+#
 # # 准备2021年数据矩阵
 # df_2021_heat <- df %>%
 #     filter(Year == "2021") %>%
 #     select(Province, GDP, PGDP, TER_GDP, APC, WAGE, PATENT, OPEN, TRANS, RD, STHC, STHC_ns)
-# 
+#
 # mat <- df_2021_heat %>%
 #     select(-Province) %>%
 #     as.matrix()
 # rownames(mat) <- df_2021_heat$Province
-# 
+#
 # # 标准化矩阵
 # mat_scaled <- scale(mat)
 # # 转换为长格式用于ggplot2
@@ -218,17 +274,17 @@ ggsave("Figure/1.4 散点图矩阵.png", plot = p_pairs, width = 13, height = 10
 #     as.data.frame() %>%
 #     mutate(Province = rownames(mat_scaled)) %>%
 #     pivot_longer(-Province, names_to = "Variable", values_to = "Value")
-# 
+#
 # # 聚类排序
 # hc_row <- hclust(dist(mat_scaled))
 # hc_col <- hclust(dist(t(mat_scaled)))
 # df_heat_long$Province <- factor(df_heat_long$Province, levels = rownames(mat_scaled)[hc_row$order])
 # df_heat_long$Variable <- factor(df_heat_long$Variable, levels = colnames(mat_scaled)[hc_col$order])
-# 
+#
 # # 绘制热图（ggplot2 学术风格）
 # p_heat <- ggplot(df_heat_long, aes(x = Variable, y = Province, fill = Value)) +
 #     geom_tile(color = "white", linewidth = 0.3) +
-# 
+#
 #     # 配色：蓝-白-红渐变
 #     scale_fill_gradient2(
 #         low = color_log,
@@ -237,7 +293,7 @@ ggsave("Figure/1.4 散点图矩阵.png", plot = p_pairs, width = 13, height = 10
 #         midpoint = 0,
 #         name = "Z-score"
 #     ) +
-# 
+#
 #     # 学术风格主题
 #     theme_academic() +
 #     theme(
@@ -249,10 +305,10 @@ ggsave("Figure/1.4 散点图矩阵.png", plot = p_pairs, width = 13, height = 10
 #         legend.key.width = unit(0.4, "cm"),
 #         legend.key.height = unit(1.5, "cm")
 #     ) +
-# 
+#
 #     coord_fixed(ratio = 0.4)
-# 
+#
 # print(p_heat)
-# 
+#
 # # 保存热图
 # ggsave("Figure/1.X heatmap_2021.png", plot = p_heat, width = 10, height = 12, dpi = 300)

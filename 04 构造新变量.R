@@ -69,16 +69,13 @@ create_scree_plot <- function(pca_obj, color, var_pct, label) {
         )
 }
 
-# Generate three scree plots with elegant colors
 p1 <- create_scree_plot(pca_factor, "#cc36ae", var_explained_1 * 100, "(a)")
 p2 <- create_scree_plot(pca_market, "#6f63cb", var_explained_2 * 100, "(b)")
 p3 <- create_scree_plot(pca_quality, "#294cc9", var_explained_3 * 100, "(c)")
 
-# Display plots
 combined_plot <- grid.arrange(p1, p2, p3, ncol = 3)
 
 ggsave("Figure/4.1 构造新变量PCA碎石图.png", combined_plot, width = 12, height = 4, dpi = 300)
-
 
 # --- 组4 & 5：产业结构与成本 (直接使用标准化后的变量) ---
 df_final$Ind_Structure <- x_scaled$TER_GDP
@@ -109,6 +106,7 @@ df_final$Year <- df$Year
 df_final$Region <- df$Region
 df_final$Province <- df$Province
 
+# 建立模型
 model_time <- lm(log_FDI ~ Innovation_Power + Market_Scale + Econ_Quality + Ind_Structure + Labor_Cost + Region + Year, data = df_final)
 summary(model_time)
 
@@ -117,7 +115,7 @@ par(mfrow = c(2, 2))
 plot(model_time, which = 1:4)
 dev.off()
 
-
+# VIF、异方差、自相关、异常值检验
 test_vif(model_time)
 test_heteroscedasticity(model_time)
 test_outliers(model_time, df_final)
