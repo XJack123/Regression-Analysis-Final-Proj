@@ -100,7 +100,7 @@ plot(model_p, which = 1:4)
 dev.off()
 
 # VIF、异方差、自相关、异常值检验
-test_vif(model_time)
+test_vif(model_p)
 test_heteroscedasticity(model_p)
 test_outliers(model_p, df_final)
 ac_out <- test_autocorrelation(model_p)
