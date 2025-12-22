@@ -93,31 +93,33 @@ model_p <- lm(log_FDI ~ Innovation_Power + Market_Scale + Econ_Quality + Ind_Str
 
 # 输出回归摘要
 summary(model_p)
+
+png("Figure/4.2 新变量回归诊断图.png", width = 1200, height = 1000, res = 120)
 par(mfrow = c(2, 2))
 plot(model_p, which = 1:4)
-
-# 输出 VIF 检验
-test_vif(model_p)
-
-# --------------------------------
-# 4. 考虑时间效应 引入时间变量
-# --------------------------------
-df_final$Year <- df$Year
-df_final$Region <- df$Region
-df_final$Province <- df$Province
-
-# 建立模型
-model_time <- lm(log_FDI ~ Innovation_Power + Market_Scale + Econ_Quality + Ind_Structure + Labor_Cost + Region + Year, data = df_final)
-summary(model_time)
-
-png("Figure/4.2 新变量+时间回归诊断图.png", width = 1200, height = 1000, res = 120)
-par(mfrow = c(2, 2))
-plot(model_time, which = 1:4)
 dev.off()
 
 # VIF、异方差、自相关、异常值检验
-test_vif(model_time)
-test_heteroscedasticity(model_time)
-test_outliers(model_time, df_final)
-ac_out <- test_autocorrelation(model_time)
-ggsave("Figure/4.3 考虑时间效应的回归的自相关图.png", ac_out$plot, width = 10, height = 8, dpi = 300)
+test_vif(model_p)
+test_heteroscedasticity(model_p)
+test_outliers(model_p, df_final)
+ac_out <- test_autocorrelation(model_p)
+ggsave("Figure/4.3 新变量回归的自相关图.png", ac_out$plot, width = 10, height = 8, dpi = 300)
+
+
+# # --------------------------------
+# # 4. 考虑时间效应 引入时间变量
+# # --------------------------------
+# df_final$Year <- df$Year
+# df_final$Region <- df$Region
+# df_final$Province <- df$Province
+# 
+# # 建立模型
+# model_time <- lm(log_FDI ~ Innovation_Power + Market_Scale + Econ_Quality + Ind_Structure + Labor_Cost + Region + Year, data = df_final)
+# summary(model_time)
+# 
+# png("Figure/4.2 新变量+时间回归诊断图.png", width = 1200, height = 1000, res = 120)
+# par(mfrow = c(2, 2))
+# plot(model_time, which = 1:4)
+# dev.off()
+
