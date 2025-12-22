@@ -28,7 +28,7 @@ Residual standard error: 0.6588 on 332 degrees of freedom
 Multiple R-squared:  0.8203,	Adjusted R-squared:  0.8165 
 F-statistic: 216.5 on 7 and 332 DF,  p-value: < 2.2e-16
 
-# ========== 多重共线性检验（VIF） ==========
+# ========== 回归诊断 ==========
 
 > test_vif(model_p)
 
@@ -46,95 +46,97 @@ F-statistic: 216.5 on 7 and 332 DF,  p-value: < 2.2e-16
 结论: 以下变量存在共线性问题:
 Innovation_Power, Market_Scale, Econ_Quality, Labor_Cost 
 
-# ====================  构造新变量 并考虑时间效应 的 结果 ============================
-# ==========   log(FDI) ~ Innovation_Power + Market_Scale + Econ_Quality +  nd_Structure + Labor_Cost + Region + Year ==
-
-> summary(model_time)
-
-
-lm(formula = log_FDI ~ Innovation_Power + Market_Scale + Econ_Quality + 
-    Ind_Structure + Labor_Cost + Region + Year, data = df_final)
-
-Residuals:
-     Min       1Q   Median       3Q      Max 
--2.32336 -0.39065  0.03451  0.49299  1.85135 
-
-Coefficients:
-                 Estimate Std. Error t value Pr(>|t|)    
-(Intercept)       6.27923    0.15497  40.519  < 2e-16 ***
-Innovation_Power -0.04326    0.05242  -0.825 0.409932    
-Market_Scale      0.18993    0.07242   2.623 0.009139 ** 
-Econ_Quality      0.95742    0.06730  14.226  < 2e-16 ***
-Ind_Structure     0.11590    0.06673   1.737 0.083384 .  
-Labor_Cost       -0.87733    0.10706  -8.195 6.01e-15 ***
-Region东部        0.04360    0.11920   0.366 0.714738    
-Region西部       -0.53455    0.09409  -5.681 2.99e-08 ***
-Year2012          0.04600    0.15972   0.288 0.773543    
-Year2013          0.04645    0.16133   0.288 0.773587    
-Year2014          0.01260    0.16335   0.077 0.938560    
-Year2015          0.15131    0.16757   0.903 0.367222    
-Year2016          0.29150    0.17263   1.689 0.092261 .  
-Year2017          0.35806    0.17893   2.001 0.046224 *  
-Year2018          0.59607    0.18720   3.184 0.001594 ** 
-Year2019          0.66809    0.19636   3.402 0.000752 ***
-Year2020          1.03607    0.20876   4.963 1.13e-06 ***
-Year2021          1.07519    0.22719   4.733 3.32e-06 ***
----
-Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
-
-Residual standard error: 0.6269 on 322 degrees of freedom
-Multiple R-squared:  0.8422,	Adjusted R-squared:  0.8339 
-F-statistic: 101.1 on 17 and 322 DF,  p-value: < 2.2e-16
-
-
-# ================== 上面这个回归的回归诊断 ======================
-
-> test_vif(model_time)
-
-========== 多重共线性检验（VIF） ==========
-
-注意: 模型包含因子变量，使用GVIF和调整后的GVIF
-诊断标准: 调整GVIF > 2 表示存在共线性问题
-
-             变量   GVIF Df 调整GVIF
- Innovation_Power 8.5347  1   2.9214
-     Market_Scale 7.4513  1   2.7297
-     Econ_Quality 8.9585  1   2.9931
-    Ind_Structure 3.8408  1   1.9598
-       Labor_Cost 9.8861  1   3.1442
-           Region 3.1484  2   1.3321
-             Year 3.4745 10   1.0643
-
-结论: 以下变量存在共线性问题:
-Innovation_Power, Market_Scale, Econ_Quality, Labor_Cost 
-> test_heteroscedasticity(model_time)
+=========== 异方差 =======================
+> test_heteroscedasticity(model_p)
 
 Spearman秩相关检验:
 
 	Spearman's rank correlation rho
 
 data:  fitted(model) and abs(residuals(model))
-S = 8672632, p-value = 1.193e-09
+S = 8680566, p-value = 1.028e-09
 alternative hypothesis: true rho is not equal to 0
 sample estimates:
        rho 
--0.3239427 
+-0.3251538 
 
 
 结论: p = 0 < 0.05，存在异方差
-秩相关系数 rho = -0.3239 
+秩相关系数 rho = -0.3252 
 
 	Spearman's rank correlation rho
 
 data:  fitted(model) and abs(residuals(model))
-S = 8672632, p-value = 1.193e-09
+S = 8680566, p-value = 1.028e-09
 alternative hypothesis: true rho is not equal to 0
 sample estimates:
        rho 
--0.3239427 
+-0.3251538 
 
+> test_outliers(model_p, df_final)
 
-> test_autocorrelation(model_time)
+========== 异常值检测 ==========
+样本总数: 340 
+
+(1) 删除学生化残差检验（|删除学生化残差| > 3）:
+发现 3 个异常观测值:
+
+ 序号 年份 省份 删除学生化残差
+   66 2021 广西         3.5061
+  286 2011 西藏        -3.8217
+  287 2012 西藏        -3.3952
+
+(2) Cook距离检验（Cook's D > 4/n = 0.0118 ）:
+发现 17 个高影响力观测值（显示前20个）:
+
+ 序号 年份 省份 Cook距离
+   55 2021 广东 0.033412
+   66 2021 广西 0.016807
+   87 2020 海南 0.012267
+  154 2011 江苏 0.015209
+  162 2019 江苏 0.014611
+  164 2021 江苏 0.052282
+  211 2013 青海 0.011924
+  286 2011 西藏 0.058037
+  287 2012 西藏 0.045553
+  288 2013 西藏 0.023934
+  289 2014 西藏 0.020783
+  290 2015 西藏 0.023479
+  291 2016 西藏 0.013075
+  292 2017 西藏 0.012536
+  294 2019 西藏 0.015117
+  295 2020 西藏 0.020401
+  296 2021 西藏 0.022756
+
+(3) 杠杆值检验（Leverage > 3(p+1)/n = 0.0706 ）:
+发现 12 个高杠杆观测值（显示前20个）:
+
+ 序号 年份 省份 杠杆值
+   12 2011 北京 0.0717
+   22 2021 北京 0.0762
+   45 2011 广东 0.1246
+   46 2012 广东 0.1067
+   47 2013 广东 0.0825
+   48 2014 广东 0.0712
+   53 2019 广东 0.0772
+   54 2020 广东 0.1201
+   55 2021 广东 0.1362
+  263 2021 上海 0.1089
+  293 2018 西藏 0.0727
+  296 2021 西藏 0.0936
+$outliers
+ 66 286 287 
+ 66 286 287 
+
+$influential
+ 55  66  87 154 162 164 211 286 287 288 289 290 291 292 294 295 296 
+ 55  66  87 154 162 164 211 286 287 288 289 290 291 292 294 295 296 
+
+$high_leverage
+ 12  22  45  46  47  48  53  54  55 263 293 296 
+ 12  22  45  46  47  48  53  54  55 263 293 296 
+
+> ac_out <- test_autocorrelation(model_p)
 
 ========== 自相关检验 ==========
 
@@ -146,23 +148,15 @@ DW值在2附近说明无自相关，接近0说明正自相关，接近4说明负
 	Durbin-Watson test
 
 data:  model
-DW = 0.41383, p-value < 2.2e-16
+DW = 0.45702, p-value < 2.2e-16
 alternative hypothesis: true autocorrelation is greater than 0
 
 
 结论: p = 0 < 0.05，存在显著自相关
-DW统计量 = 0.4138 
+DW统计量 = 0.457 
 提示: DW < 1.5，可能存在正自相关
 建议: 使用HAC标准误或考虑动态模型
 
 
 (2) 绘制残差自相关图 (ei vs ei-1):
-相关系数 (ei, ei-1) = 0.793 
-$dw_test
-
-	Durbin-Watson test
-
-data:  model
-DW = 0.41383, p-value < 2.2e-16
-alternative hypothesis: true autocorrelation is greater than 0
-
+相关系数 (ei, ei-1) = 0.7713 
