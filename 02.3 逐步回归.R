@@ -6,7 +6,7 @@
 
 # 1. 环境设置与包加载
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
-source("01 数据处理.R", encoding = "UTF-8")
+source("00 数据处理.R", encoding = "UTF-8")
 
 # =============================== 2. 数据预处理 ==========================
 invisible(capture.output(source("02 多元线性回归.R", encoding = "UTF-8")))

@@ -222,17 +222,17 @@ ggsave("Figure/1.4 散点图矩阵.png", plot = p_pairs, width = 13, height = 10
 
 
 # # ========================== Region 分组箱线图 ========================
-# 
-# 
+#
+#
 # # 以 2021 年数据按 Region 绘制 FDI 分组箱线图
 # # 使用与散点图矩阵一致的 Region 四分法与配色，并应用 theme_academic()
 # df_2021_box <- df_raw %>%
 #     mutate(Year = as.character(Year)) %>%
 #     filter(Year == "2021") %>%
 #     mutate(Region = factor(Region, levels = c("西部", "东北", "中部", "东部")))
-# 
+#
 # cols_npg <- c("#54a377ff", "#DB7093", "#6f63cb", "#b6b859ff")
-# 
+#
 # # 取对数后的 2021 年 FDI 分组箱线图
 # p_box_log_2021 <- ggplot(df_2021_box, aes(x = Region, y = log(FDI), color = Region)) +
 #     geom_boxplot(
@@ -247,9 +247,9 @@ ggsave("Figure/1.4 散点图矩阵.png", plot = p_pairs, width = 13, height = 10
 #         axis.text.x = element_text(size = 9),
 #         axis.text.y = element_text(size = 9)
 #     )
-# 
+#
 # print(p_box_log_2021)
-# 
+#
 # ggsave("Figure/1.4.1 2021年log(FDI)分组箱线图.png", plot = p_box_log_2021, width = 8, height = 5, dpi = 300)
 
 

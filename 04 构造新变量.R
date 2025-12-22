@@ -1,5 +1,5 @@
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
-source("01 数据处理.R", encoding = "UTF-8")
+source("00 数据处理.R", encoding = "UTF-8")
 
 # ---------------------------------------------------------
 # 1. 数据导入与预处理
@@ -113,13 +113,12 @@ ggsave("Figure/4.3 新变量回归的自相关图.png", ac_out$plot, width = 10,
 # df_final$Year <- df$Year
 # df_final$Region <- df$Region
 # df_final$Province <- df$Province
-# 
+#
 # # 建立模型
 # model_time <- lm(log_FDI ~ Innovation_Power + Market_Scale + Econ_Quality + Ind_Structure + Labor_Cost + Region + Year, data = df_final)
 # summary(model_time)
-# 
+#
 # png("Figure/4.2 新变量+时间回归诊断图.png", width = 1200, height = 1000, res = 120)
 # par(mfrow = c(2, 2))
 # plot(model_time, which = 1:4)
 # dev.off()
-

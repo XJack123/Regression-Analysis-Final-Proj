@@ -6,7 +6,7 @@
 
 # 1. 环境设置
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
-source("01 数据处理.R", encoding = "UTF-8")
+source("00 数据处理.R", encoding = "UTF-8")
 
 # 2. 加载必要的包
 if (!require(glmnet)) install.packages("glmnet")
