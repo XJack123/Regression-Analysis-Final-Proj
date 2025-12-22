@@ -1,5 +1,5 @@
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
-source("01 数据处理.R", encoding = "UTF-8")
+source("00 数据处理.R", encoding = "UTF-8")
 
 # 删除某 （year-province）的行
 df <- df[!(df$Year == "2021" & df$Province == "海南"), ]

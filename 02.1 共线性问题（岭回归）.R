@@ -1,5 +1,5 @@
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
-source("01 数据处理.R", encoding = "UTF-8")
+source("00 数据处理.R", encoding = "UTF-8")
 
 # ============ 1. 数据准备 (Log转换/去异常) ============
 invisible(capture.output(source("02 多元线性回归.R", encoding = "UTF-8")))
